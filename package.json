@@ -1,0 +1,28 @@
+{
+  "name": "css-info",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive",
+    "test:watch": "npm run test -- --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://jeanfredrik@github.com/jeanfredrik/css-info.git"
+  },
+  "author": "Fredrik Johansson <jeanfredrik@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jeanfredrik/css-info/issues"
+  },
+  "homepage": "https://github.com/jeanfredrik/css-info#readme",
+  "dependencies": {
+    "css": "^2.2.1",
+    "jspath": "^0.3.2"
+  },
+  "devDependencies": {
+    "chai": "^3.4.1",
+    "mocha": "^2.3.4"
+  }
+}
