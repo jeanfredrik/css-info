@@ -66,10 +66,11 @@ module.exports = {
 					}]
 				}
 			}, {indent: '  '});
+			delete classesByName[className].declarations;
 			classes.push(classesByName[className]);
 		});
 		return {
-			'classes': []
+			'classes': classes
 		};
 	}
 };
