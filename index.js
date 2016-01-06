@@ -1,5 +1,4 @@
 var css = require('css');
-var jspath = require('jspath');
 var _ = require('underscore');
 var Immutable = require('immutable');
 
