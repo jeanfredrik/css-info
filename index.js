@@ -20,6 +20,7 @@ CssValue.prototype.getAll = function(str, cb) {
 		return '';
 	});
 	cb(matches);
+	return result;
 };
 
 //XXX Currently accepts all alphabetical strings as units
@@ -236,7 +237,9 @@ module.exports = {
 			negativeValues: true,
 			destructureShorthands: true,
 		}, options || {});
+
 		var file = css.parse(input);
+
 		var rules = file.stylesheet.rules;
 		var classesByName = {};
 		rules = rules.filter(_.partial(parseRule, classesByName, null));
