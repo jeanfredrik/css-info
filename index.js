@@ -1,5 +1,5 @@
 var css = require('css');
-var _ = require('underscore');
+var _ = require('lodash');
 var Immutable = require('immutable');
 
 function declarationHasNoVendorPrefixes(declaration) {
@@ -287,13 +287,13 @@ module.exports = {
 				return pair.join(':');
 			};
 			classes.forEach(function(classObj) {
-				classObj.declarationsString = _.chain(classObj.declarationsMap).pairs().sortBy('0').map(joiner).value().join(';');
+				classObj.declarationsString = _.chain(classObj.declarationsMap).toPairs().sortBy('0').map(joiner).value().join(';');
 			});
 		}
 
 		if(options.values) {
 			classes.forEach(function(classObj) {
-				classObj.values = _.chain(classObj.declarationsMap).pairs().pluck('1').uniq().value();
+				classObj.values = _.chain(classObj.declarationsMap).toPairs().map('1').uniq().value();
 			});
 		}
 
@@ -305,7 +305,7 @@ module.exports = {
 
 		if(options.properties) {
 			classes.forEach(function(classObj) {
-				classObj.properties = _.chain(classObj.declarationsMap).pairs().pluck('0').uniq().value();
+				classObj.properties = _.chain(classObj.declarationsMap).toPairs().map('0').uniq().value();
 			});
 		}
 
