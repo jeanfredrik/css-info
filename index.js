@@ -1,3 +1,5 @@
+var CssValue = require('./lib/CssValue.js');
+var destructureDeclaration = require('./lib/destructureDeclaration.js');
 var css = require('css');
 var _ = require('lodash');
 var Immutable = require('immutable');
@@ -6,219 +8,83 @@ function declarationHasNoVendorPrefixes(declaration) {
 	return !/^-.*?-/.test(declaration.property) && !/^-.*?-/.test(declaration.value);
 }
 
-var CssValue = function(regex, options) {
-	_.extend(this, options);
-	var regexSource = regex.source;
-	this.getAllRegex = this.getAllRegex || new RegExp('(?:^|\s+)('+regexSource+')(?:$|\s+)', 'g');
-	this.getOneRegex = this.getOneRegex || new RegExp('(?:^|\s+)('+regexSource+')(?:$|\s+)', '');
-	this.getNextRegex = this.getNextRegex || new RegExp('^(?:\s*)('+regexSource+')(?:$|\s+)', '');
-};
-CssValue.prototype.getAll = function(str, cb) {
-	var matches = [];
-	var result = str.replace(this.getAllRegex, function() {
-		matches.push(arguments[1]);
-		return '';
-	});
-	cb(matches);
-	return result;
-};
-
-//XXX Currently accepts all alphabetical strings as units
-//XXX Currently accepts unitless numbers that are not zero
-CssValue.lengthValue = new CssValue(/^[+-]?(\d+|\d*\.\d+)([a-z]+)?$/);
-
-CssValue.borderStyle = new CssValue(/^(none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset)$/);
-
-//XXX Currently accepts anything wrapped in rgb(), rgba(), hsl() and hsla() as color
-//XXX Currently accepts hexstring of any length as color
-//XXX Currently accepts all alpabetical strings as colors
-CssValue.color = new CssValue(/^((rgba?|hsla?)\(.*?\)|#[0-9a-fA-F]+|[a-zA-Z]+)$/);
-
-function destructureDeclaration(declaration) {
-	var propertyMatches, destructuredDeclarations, values;
-
-	// border-top, border-right, border-bottom, border-left
-	if((propertyMatches = declaration.property.match(/^border-(top|right|bottom|left)$/))) {
-		destructuredDeclarations = {};
-		declaration.value = CssValue.lengthValue.getAll(declaration.value, function(values) {
-			if(values.length) {
-				destructuredDeclarations[propertyMatches[0]+'-width'] = values[values.length-1];
-			} else {
-				destructuredDeclarations[propertyMatches[0]+'-width'] = 'initial';
-			}
-		});
-		declaration.value = CssValue.borderStyle.getAll(declaration.value, function(values) {
-			if(values.length) {
-				destructuredDeclarations[propertyMatches[0]+'-style'] = values[values.length-1];
-			} else {
-				destructuredDeclarations[propertyMatches[0]+'-style'] = 'initial';
-			}
-		});
-		declaration.value = CssValue.color.getAll(declaration.value, function(values) {
-			if(values.length) {
-				destructuredDeclarations[propertyMatches[0]+'-color'] = values[values.length-1];
-			} else {
-				destructuredDeclarations[propertyMatches[0]+'-color'] = 'initial';
-			}
-		});
-		return _.map(destructuredDeclarations, function(value, property) {
-			return {
-				property: property,
-				value: value
-			};
-		});
-	}
-	// border
-	else if((propertyMatches = declaration.property.match(/^border$/))) {
-		destructuredDeclarations = {};
-		declaration.value = CssValue.lengthValue.getAll(declaration.value, function(values) {
-			if(values.length) {
-				destructuredDeclarations['border-top-width'] = values[values.length-1];
-				destructuredDeclarations['border-right-width'] = values[values.length-1];
-				destructuredDeclarations['border-bottom-width'] = values[values.length-1];
-				destructuredDeclarations['border-left-width'] = values[values.length-1];
-			} else {
-				destructuredDeclarations['border-top-width'] = 'initial';
-				destructuredDeclarations['border-right-width'] = 'initial';
-				destructuredDeclarations['border-bottom-width'] = 'initial';
-				destructuredDeclarations['border-left-width'] = 'initial';
-			}
-		});
-		declaration.value = CssValue.borderStyle.getAll(declaration.value, function(values) {
-			if(values.length) {
-				destructuredDeclarations['border-top-style'] = values[values.length-1];
-				destructuredDeclarations['border-right-style'] = values[values.length-1];
-				destructuredDeclarations['border-bottom-style'] = values[values.length-1];
-				destructuredDeclarations['border-left-style'] = values[values.length-1];
-			} else {
-				destructuredDeclarations['border-top-style'] = 'initial';
-				destructuredDeclarations['border-right-style'] = 'initial';
-				destructuredDeclarations['border-bottom-style'] = 'initial';
-				destructuredDeclarations['border-left-style'] = 'initial';
-			}
-		});
-		declaration.value = CssValue.color.getAll(declaration.value, function(values) {
-			if(values.length) {
-				destructuredDeclarations['border-top-color'] = values[values.length-1];
-				destructuredDeclarations['border-right-color'] = values[values.length-1];
-				destructuredDeclarations['border-bottom-color'] = values[values.length-1];
-				destructuredDeclarations['border-left-color'] = values[values.length-1];
-			} else {
-				destructuredDeclarations['border-top-color'] = 'initial';
-				destructuredDeclarations['border-right-color'] = 'initial';
-				destructuredDeclarations['border-bottom-color'] = 'initial';
-				destructuredDeclarations['border-left-color'] = 'initial';
-			}
-		});
-		return _.map(destructuredDeclarations, function(value, property) {
-			return {
-				property: property,
-				value: value
-			};
-		});
-	}
-	// border-style, border-width, border-color
-	else if((propertyMatches = declaration.property.match(/^border-(style|width|color)$/))) {
-		values = declaration.value.split(/\s+/g);
-		CssValue[
-			{
-				style: 'borderStyle',
-				width: 'lengthValue',
-				color: 'color',
-			}[propertyMatches[1]]
-		].getAll(declaration.value, function(matchedValues) {
-			values = matchedValues;
-		});
-		destructuredDeclarations = {};
-		switch(values.length) {
-			case 1:
-			destructuredDeclarations['border-top-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-right-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-bottom-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-left-'+propertyMatches[1]] = values[0];
-			break;
-			case 2:
-			destructuredDeclarations['border-top-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-right-'+propertyMatches[1]] = values[1];
-			destructuredDeclarations['border-bottom-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-left-'+propertyMatches[1]] = values[1];
-			break;
-			case 3:
-			destructuredDeclarations['border-top-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-right-'+propertyMatches[1]] = values[1];
-			destructuredDeclarations['border-bottom-'+propertyMatches[1]] = values[2];
-			destructuredDeclarations['border-left-'+propertyMatches[1]] = values[1];
-			break;
-			case 4:
-			destructuredDeclarations['border-top-'+propertyMatches[1]] = values[0];
-			destructuredDeclarations['border-right-'+propertyMatches[1]] = values[1];
-			destructuredDeclarations['border-bottom-'+propertyMatches[1]] = values[2];
-			destructuredDeclarations['border-left-'+propertyMatches[1]] = values[3];
-			break;
-		}
-		return _.map(destructuredDeclarations, function(value, property) {
-			return {
-				property: property,
-				value: value
-			};
-		});
-	} else {
-		return [{
-			property: declaration.property,
-			value: declaration.value,
-		}];
-	}
-
-}
-
-function parseRule(classesByName, context, rule) {
+function parseRule(classesByName, discardedClassNames, context, rule) {
 	context = (context || new Immutable.Map({
 		medias: new Immutable.Set()
 	}));
 	if(rule.type === 'rule') {
-		var extendee;
-		rule.selectors.forEach(function(selector) {
-			// Skip selectors that are comprised of anything more than classes and pseudo-classes.
-			if(!/^(\.[\w-]+|:[\w-]+)+$/.test(selector)) return;
-			var selectorParts = selector.split(/(?!^)(?=[.:])/g);
-			var selectorClasses = [];
-			var selectorPseudoClasses = [];
-			selectorParts.forEach(function(part) {
-				if(part.substr(0,1) == '.') {
-					selectorClasses.push(part.substr(1));
+		var invalidSelectors = [];
+		var validSelectors = [];
+		var className, selectorParts, selectorClasses, selectorPseudoClasses;
+		rule = Immutable.fromJS(rule);
+		rule.get('selectors').forEach(function(selector) {
+			if(!/^(\.[\w-]+|:[\w-]+)+$/.test(selector)) {
+				// Skip selectors that are comprised of anything more than classes and pseudo-classes.
+				invalidSelectors.push(selector);
+			} else {
+				selectorParts = selector.split(/(?!^)(?=[.:])/g);
+				selectorClasses = [];
+				selectorPseudoClasses = [];
+				selectorParts.forEach(function(part) {
+					if(part.substr(0,1) == '.') {
+						selectorClasses.push(part.substr(1));
+					} else {
+						selectorPseudoClasses.push(part.substr(1));
+					}
+				});
+				if(selectorClasses.length == 1) {
+					className = selectorClasses[0];
+					if(_.includes(discardedClassNames, className)) {
+						// Skip selector if class is in `discardedClassNames`
+						invalidSelectors.push(selector);
+					} else {
+						if(!classesByName[className] || _.xor(classesByName[className].states, selectorPseudoClasses).length === 0) {
+							// Selector is valid!
+							validSelectors.push({
+								className: className,
+								states: selectorPseudoClasses,
+							});
+						} else {
+							// Skip selector if pseudo-classes doesn't match a previous selector with same class
+							invalidSelectors.push(selector);
+							discardedClassNames.push(className);
+							if(classesByName[className]) {
+								delete classesByName[className];
+							}
+						}
+					}
 				} else {
-					selectorPseudoClasses.push(part.substr(1));
+					// Skip selectors with more than one class
+					invalidSelectors.push(selector);
 				}
-			});
-			if(selectorClasses.length == 1) {
-				var className = selectorClasses[0];
-				classesByName[className] = classesByName[className] || {};
-				classesByName[className].declarations = (classesByName[className].declarations || []).concat(rule.declarations);
-				if(selectorPseudoClasses.length) {
-					classesByName[className].states = selectorPseudoClasses;
-				} else {
-					classesByName[className].states = [];
-				}
-				if(extendee) {
-					classesByName[className].extendees = classesByName[className].extendees || [];
-					classesByName[className].extendees.push(extendee);
-				} else if(!selectorPseudoClasses.length) {
-					extendee = className;
-				}
-				classesByName[className].medias = context.get('medias').toArray();
 			}
 		});
-		return false;
+		if(validSelectors.length) {
+			classesByName[className] = classesByName[className] || {};
+			classesByName[className].declarations = (classesByName[className].declarations || []).concat(rule.get('declarations').toJS());
+			if(selectorPseudoClasses.length) {
+				classesByName[className].states = selectorPseudoClasses;
+			} else {
+				classesByName[className].states = [];
+			}
+			classesByName[className].medias = context.get('medias').toArray();
+		}
+		if(invalidSelectors.length) {
+			return [rule.set('selectors', invalidSelectors)];
+		} else {
+			return [];
+		}
 	} else if(rule.type === 'media') {
-		rule.rules = rule.rules.filter(_.partial(parseRule, classesByName, context.update('medias', function(medias) {
+		rule.rules = rule.rules.filter(_.partial(parseRule, classesByName, discardedClassNames, context.update('medias', function(medias) {
 			return medias.add(rule.media);
 		})));
 		return rule.rules.length > 1;
 	}
-	return true;
+	// return [rule];
 }
 
 module.exports = {
+	_parseRule: parseRule,
 	'parse': function(input, options) {
 		options = _.extend({
 			medias: true,
@@ -241,8 +107,9 @@ module.exports = {
 		var file = css.parse(input);
 
 		var rules = file.stylesheet.rules;
+		var discardedClassNames = [];
 		var classesByName = {};
-		rules = rules.filter(_.partial(parseRule, classesByName, null));
+		rules = _.flatMap(rules, _.partial(parseRule, classesByName, discardedClassNames, null));
 		var classes = _.values(classesByName);
 		Object.keys(classesByName).forEach(function(className) {
 			var classObj = classesByName[className];
@@ -293,7 +160,7 @@ module.exports = {
 
 		if(options.values) {
 			classes.forEach(function(classObj) {
-				classObj.values = _.chain(classObj.declarationsMap).toPairs().map('1').uniq().value();
+				classObj.values = _.chain(classObj.declarationsMap).values().uniq().value();
 			});
 		}
 
@@ -305,7 +172,7 @@ module.exports = {
 
 		if(options.properties) {
 			classes.forEach(function(classObj) {
-				classObj.properties = _.chain(classObj.declarationsMap).toPairs().map('0').uniq().value();
+				classObj.properties = _.chain(classObj.declarationsMap).keys().uniq().value();
 			});
 		}
 
