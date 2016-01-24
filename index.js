@@ -93,7 +93,9 @@ function parseRule(classesByName, discardedClassNames, context, rule) {
 		rule.rules = rule.rules.filter(_.partial(parseRule, classesByName, discardedClassNames, context.update('medias', function(medias) {
 			return medias.add(rule.media);
 		})));
-		return rule.rules.length > 1;
+		if(rule.rules.length > 1) {
+			return [rule];
+		}
 	}
 	// return [rule];
 }
