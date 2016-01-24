@@ -108,4 +108,9 @@ describe('cssInfo.parse(…)', function() {
 		var result = cssInfo.parse(input);
 		expect(result.classes).to.have.length(0);
 	});
+	it('handles rules with multiple valid selectors', function() {
+		var input = '.active-yellow:active, .focus-yellow:focus, .yellow, .hover-yellow:hover { color: yellow; }';
+		var result = cssInfo.parse(input);
+		expect(result.classes).to.have.length(4);
+	});
 });
