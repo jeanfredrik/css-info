@@ -118,4 +118,19 @@ describe('cssInfo.parse(…)', function() {
 		var result = cssInfo.parse(input);
 		expect(result.classes).to.have.length(2);
 	});
+	it('handles selectors with media queries', function() {
+		var input = '@media (min-width: 40em) { .hover-yellow:hover { color: yellow; } }';
+		var result = cssInfo.parse(input);
+		expect(result.classes).to.have.length(1);
+		expect(result.classes[0]).to.have.property('className', 'hover-yellow');
+		expect(result.classes[0]).to.have.property('propertiesString').that.equals('color');
+		expect(result.classes[0]).to.have.property('valuesString').that.equals('yellow');
+		expect(result.classes[0]).to.have.property('statesString').that.equals('hover');
+		expect(result.classes[0]).to.have.property('mediasString').that.equals('(min-width: 40em)');
+	});
+	it('discards classes with dissimilar media queries', function() {
+		var input = '.hover-yellow:hover { color: yellow; } @media (min-width: 40em) { .hover-yellow:hover { color: yellow; } }';
+		var result = cssInfo.parse(input);
+		expect(result.classes).to.have.length(0);
+	});
 });

@@ -57,15 +57,24 @@ function parseRule(classesByName, discardedClassNames, context, rule) {
 						// Skip selector if class is in `discardedClassNames`
 						invalidSelectors.push(selector);
 					} else {
-						if(!classesByName[className] || _.xor(classesByName[className].states, selectorParts.pseudoClasses).length === 0) {
-							// Selector is valid!
-							addValidRule(classesByName, context, rule, selectorParts);
-						} else {
+						if(classesByName[className] && _.xor(classesByName[className].states, selectorParts.pseudoClasses).length !== 0) {
 							// Skip selector if pseudo-classes doesn't match a previous selector with same class
 							invalidSelectors.push(selector);
 							discardedClassNames.push(className);
 							if(classesByName[className]) {
 								delete classesByName[className];
+							}
+						} else {
+							if(classesByName[className] && _.xor(classesByName[className].medias, context.get('medias').toArray()).length !== 0) {
+								// Skip selector if media queries doesn't match a previous selector with same class
+								invalidSelectors.push(selector);
+								discardedClassNames.push(className);
+								if(classesByName[className]) {
+									delete classesByName[className];
+								}
+							} else {
+								// Selector is valid!
+								addValidRule(classesByName, context, rule, selectorParts);
 							}
 						}
 					}
