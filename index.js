@@ -1,4 +1,3 @@
-var CssValue = require('./lib/CssValue.js');
 var destructureDeclaration = require('./lib/destructureDeclaration.js');
 var css = require('css');
 var _ = require('lodash');
@@ -8,6 +7,23 @@ function declarationHasNoVendorPrefixes(declaration) {
 	return !/^-.*?-/.test(declaration.property) && !/^-.*?-/.test(declaration.value);
 }
 
+function parseValidSelector(selector) {
+	var selectorParts = selector.split(/(?!^)(?=[.:])/g);
+	var selectorClasses = [];
+	var selectorPseudoClasses = [];
+	selectorParts.forEach(function(part) {
+		if(part.substr(0,1) == '.') {
+			selectorClasses.push(part.substr(1));
+		} else {
+			selectorPseudoClasses.push(part.substr(1));
+		}
+	});
+	return {
+		classes: selectorClasses,
+		pseudoClasses: selectorPseudoClasses,
+	};
+}
+
 function parseRule(classesByName, discardedClassNames, context, rule) {
 	context = (context || new Immutable.Map({
 		medias: new Immutable.Set()
@@ -15,34 +31,25 @@ function parseRule(classesByName, discardedClassNames, context, rule) {
 	if(rule.type === 'rule') {
 		var invalidSelectors = [];
 		var validSelectors = [];
-		var className, selectorParts, selectorClasses, selectorPseudoClasses;
 		rule = Immutable.fromJS(rule);
 		rule.get('selectors').forEach(function(selector) {
+			var className, selectorParts;
 			if(!/^(\.[\w-]+|:[\w-]+)+$/.test(selector)) {
 				// Skip selectors that are comprised of anything more than classes and pseudo-classes.
 				invalidSelectors.push(selector);
 			} else {
-				selectorParts = selector.split(/(?!^)(?=[.:])/g);
-				selectorClasses = [];
-				selectorPseudoClasses = [];
-				selectorParts.forEach(function(part) {
-					if(part.substr(0,1) == '.') {
-						selectorClasses.push(part.substr(1));
-					} else {
-						selectorPseudoClasses.push(part.substr(1));
-					}
-				});
-				if(selectorClasses.length == 1) {
-					className = selectorClasses[0];
+				selectorParts = parseValidSelector(selector);
+				if(selectorParts.classes.length == 1) {
+					className = selectorParts.classes[0];
 					if(_.includes(discardedClassNames, className)) {
 						// Skip selector if class is in `discardedClassNames`
 						invalidSelectors.push(selector);
 					} else {
-						if(!classesByName[className] || _.xor(classesByName[className].states, selectorPseudoClasses).length === 0) {
+						if(!classesByName[className] || _.xor(classesByName[className].states, selectorParts.pseudoClasses).length === 0) {
 							// Selector is valid!
 							validSelectors.push({
 								className: className,
-								states: selectorPseudoClasses,
+								states: selectorParts.pseudoClasses,
 							});
 						} else {
 							// Skip selector if pseudo-classes doesn't match a previous selector with same class
@@ -60,14 +67,17 @@ function parseRule(classesByName, discardedClassNames, context, rule) {
 			}
 		});
 		if(validSelectors.length) {
-			classesByName[className] = classesByName[className] || {};
-			classesByName[className].declarations = (classesByName[className].declarations || []).concat(rule.get('declarations').toJS());
-			if(selectorPseudoClasses.length) {
-				classesByName[className].states = selectorPseudoClasses;
-			} else {
-				classesByName[className].states = [];
-			}
-			classesByName[className].medias = context.get('medias').toArray();
+			_.forEach(validSelectors, function(selector) {
+				var className = selector.className;
+				classesByName[className] = classesByName[className] || {};
+				classesByName[className].declarations = (classesByName[className].declarations || []).concat(rule.get('declarations').toJS());
+				if(selector.states.length) {
+					classesByName[className].states = selector.states;
+				} else {
+					classesByName[className].states = [];
+				}
+				classesByName[className].medias = context.get('medias').toArray();
+			});
 		}
 		if(invalidSelectors.length) {
 			return [rule.set('selectors', invalidSelectors)];
