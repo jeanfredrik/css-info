@@ -24,6 +24,18 @@ function parseValidSelector(selector) {
 	};
 }
 
+function addValidRule(classesByName, context, rule, selectorParts) {
+	var className = selectorParts.classes[0];
+	classesByName[className] = classesByName[className] || {};
+	classesByName[className].declarations = (classesByName[className].declarations || []).concat(rule.get('declarations').toJS());
+	if(selectorParts.pseudoClasses.length) {
+		classesByName[className].states = selectorParts.pseudoClasses;
+	} else {
+		classesByName[className].states = [];
+	}
+	classesByName[className].medias = context.get('medias').toArray();
+}
+
 function parseRule(classesByName, discardedClassNames, context, rule) {
 	context = (context || new Immutable.Map({
 		medias: new Immutable.Set()
@@ -47,10 +59,7 @@ function parseRule(classesByName, discardedClassNames, context, rule) {
 					} else {
 						if(!classesByName[className] || _.xor(classesByName[className].states, selectorParts.pseudoClasses).length === 0) {
 							// Selector is valid!
-							validSelectors.push({
-								className: className,
-								states: selectorParts.pseudoClasses,
-							});
+							addValidRule(classesByName, context, rule, selectorParts);
 						} else {
 							// Skip selector if pseudo-classes doesn't match a previous selector with same class
 							invalidSelectors.push(selector);
@@ -66,19 +75,6 @@ function parseRule(classesByName, discardedClassNames, context, rule) {
 				}
 			}
 		});
-		if(validSelectors.length) {
-			_.forEach(validSelectors, function(selector) {
-				var className = selector.className;
-				classesByName[className] = classesByName[className] || {};
-				classesByName[className].declarations = (classesByName[className].declarations || []).concat(rule.get('declarations').toJS());
-				if(selector.states.length) {
-					classesByName[className].states = selector.states;
-				} else {
-					classesByName[className].states = [];
-				}
-				classesByName[className].medias = context.get('medias').toArray();
-			});
-		}
 		if(invalidSelectors.length) {
 			return [rule.set('selectors', invalidSelectors)];
 		} else {

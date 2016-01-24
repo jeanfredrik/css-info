@@ -113,4 +113,9 @@ describe('cssInfo.parse(…)', function() {
 		var result = cssInfo.parse(input);
 		expect(result.classes).to.have.length(4);
 	});
+	it('handles rules with both valid and invalid selectors', function() {
+		var input = '.active-yellow:active, .focus-yellow:focus, .yellow, .yellow:hover { color: yellow; }';
+		var result = cssInfo.parse(input);
+		expect(result.classes).to.have.length(2);
+	});
 });
