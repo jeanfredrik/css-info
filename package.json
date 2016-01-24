@@ -1,6 +1,6 @@
 {
   "name": "css-info",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -20,7 +20,7 @@
   "dependencies": {
     "css": "^2.2.1",
     "immutable": "^3.7.6",
-    "underscore": "^1.8.3"
+    "lodash": "^4.0.0"
   },
   "devDependencies": {
     "chai": "^3.4.1",
